@@ -1,116 +1,132 @@
 let BookModel = require('../models/books');
 
+// GET ONE BOOK
 module.exports.getBook = async function (req, res, next) {
   try {
-    // Find one using the id sent in the parameter of the request
-    let book = await BookModel.findOne({ _id: req.params.bookId });
+    let book = await BookModel.findById(req.params.id);
+
+    if (!book) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found.",
+        data: null
+      });
+    }
+
+    let obj = book.toObject();
+    obj.id = obj._id;
+    delete obj._id;
+    delete obj.__v;
 
     res.json({
       success: true,
       message: "Book retrieved successfully.",
-      data: book
+      data: obj
     });
 
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
+};
 
+
+// CREATE BOOK
 module.exports.create = async function (req, res, next) {
   try {
-    // Get input from the request
-    let book = req.body;
+    let result = await BookModel.create(req.body);
 
-    // Insert into the DB
-    let result = await BookModel.create(book);
-    console.log("Result: ", result);
+    let obj = result.toObject();
+    obj.id = obj._id;
+    delete obj._id;
+    delete obj.__v;
 
-    // Send a response
-    res.status(200);
-    res.json(
-      {
-        success: true,
-        message: "Book created successfully.",
-        data: result
-      }
-    );
+    res.json({
+      success: true,
+      message: "Book created successfully.",
+      data: obj
+    });
 
   } catch (error) {
     console.log(error);
     next(error);
   }
+};
 
-}
 
+// GET ALL BOOKS
 module.exports.getAll = async function (req, res, next) {
   try {
-    // Get all from the DB.
     let list = await BookModel.find();
 
-    // Send a response
-    res.json({
-        success: true,
-        message: "Book list retrieved successfully.",
-        data: list
+    let formattedList = list.map(book => {
+      let obj = book.toObject();
+      obj.id = obj._id;
+      delete obj._id;
+      delete obj.__v;
+      return obj;
     });
+
+    res.json({
+      success: true,
+      message: "Book list retrieved successfully.",
+      data: formattedList
+    });
+
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
+};
 
+
+// UPDATE BOOK
 module.exports.update = async function (req, res, next) {
   try {
-    // Get input from the request
-    let updatedBook = BookModel(req.body);
-    updatedBook._id = req.params.id;
+    let updated = await BookModel.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
 
-    // Submit the change
-    let result = await BookModel.updateOne({ _id: req.params.id });
-    console.log("Result: ", result);
-
-    // Handle the result: send a response.
-    if (result.modifiedCount > 0) {
-      res.status(200);
-      res.json(
-        {
-          success: true,
-          message: "Book updated successfully."
-        }
-      );
-    } else {
-      throw new Error('Book not updated. Are you sure it exists?')
+    if (!updated) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found."
+      });
     }
+
+    res.json({
+      success: true,
+      message: "Book updated successfully."
+    });
 
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
+};
 
 
+// DELETE BOOK
 module.exports.remove = async function (req, res, next) {
   try {
-    // Delete  using the id sent in the parameter of the request
-    let result = await BookModel.deleteOne({ _id: req.params.id });
-    console.log("Result: ", result);
+    let result = await BookModel.findByIdAndDelete(req.params.id);
 
-    // Handle the result and send a response
-    if (result.deletedCount > 0) {
-      res.status(200);
-      res.json(
-        {
-          success: true,
-          message: "Book deleted successfully."
-        }
-      );
-    } else {
-      throw new Error('Book not deleted. Are you sure it exists?')
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: "Book not found."
+      });
     }
+
+    res.json({
+      success: true,
+      message: "Book deleted successfully."
+    });
 
   } catch (error) {
     console.log(error);
     next(error);
   }
-}
+};

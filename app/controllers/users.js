@@ -1,107 +1,145 @@
 let UsersModel = require('../models/users');
 
+
+// GET ALL USERS
 module.exports.usersList = async function (req, res, next) {
-
     try {
-        // Retrieves a list of users from the DB and waits for the result.
-        // Add your code here to retrieve the list of users from the database using the UsersModel.        
 
-        // If the list is empty, throw an error. Otherwise, return the list as a JSON response.
+        let users = await UsersModel.find();
+
+        if (!users || users.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No users found.",
+                data: []
+            });
+        }
+
+        let formattedUsers = users.map(user => {
+            let obj = user.toObject();
+            obj.id = obj._id;
+            delete obj._id;
+            delete obj.__v;
+            return obj;
+        });
+
+        res.json({
+            success: true,
+            message: "User list retrieved successfully.",
+            data: formattedUsers
+        });
+
     } catch (error) {
         console.log(error);
         next(error);
     }
+};
 
-}
 
+// GET USER BY ID
 module.exports.getByID = async function (req, res, next) {
     try {
-        let user = await UsersModel.findOne({ _id: req.params.id });
-        if (!user)
-            throw new Error('User not found. Are you sure it exists?') 
-        
+
+        let user = await UsersModel.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found.",
+                data: null
+            });
+        }
+
+        let obj = user.toObject();
+        obj.id = obj._id;
+        delete obj._id;
+        delete obj.__v;
+
         res.json({
             success: true,
             message: "User retrieved successfully.",
-            data: user
+            data: obj
         });
-        
+
     } catch (error) {
         console.log(error);
         next(error);
     }
-}
+};
 
+
+// ADD USER
 module.exports.processAdd = async (req, res, next) => {
     try {
- 
-        // Builds a new user from the values of the body of the request.
-        // Add your code here to create a new user object using the UsersModel and the data from req.body
+
+        let newUser = await UsersModel.create(req.body);
+
+        let obj = newUser.toObject();
+        obj.id = obj._id;
+        delete obj._id;
+        delete obj.__v;
+
+        res.json({
+            success: true,
+            message: "User created successfully.",
+            data: obj
+        });
 
     } catch (error) {
         console.log(error);
         next(error);
     }
-}
+};
 
+
+// UPDATE USER
 module.exports.processEdit = async (req, res, next) => {
     try {
 
-        let id = req.params.id;
+        let updatedUser = await UsersModel.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
+        );
 
-        // Builds updatedUser from the values of the body of the request.
-        let updatedUser = UsersModel(req.body);
-        updatedUser._id = id;
-
-        // Submits updatedUser to the DB and waits for a result.
-        let result = await UsersModel.updateOne({ _id: id }, updatedUser);
-        console.log("====> Result: ", result);
-
-        // If the user is updated redirects to the list
-        if (result.modifiedCount > 0) {
-            res.json(
-                {
-                    success: true,
-                    message: "User updated successfully."
-                }
-            );
+        if (!updatedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found."
+            });
         }
-        else {
-            // Express will catch this on its own.
-            throw new Error('User not udated. Are you sure it exists?')
-        }
+
+        res.json({
+            success: true,
+            message: "User updated successfully."
+        });
 
     } catch (error) {
-        next(error)
+        next(error);
     }
-}
+};
 
 
+// DELETE USER
 module.exports.performDelete = async (req, res, next) => {
-
     try {
 
-        let id = req.params.id;
+        let deletedUser = await UsersModel.findByIdAndDelete(req.params.id);
 
-        let result = await UsersModel.deleteOne({ _id: id });
+        if (!deletedUser) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found."
+            });
+        }
 
-        console.log("====> Result: ", result);
-        if (result.deletedCount > 0) {
-            // refresh the book list
-            res.json(
-                {
-                    success: true,
-                    message: "User deleted successfully."
-                }
-            )
-        }
-        else {
-            // Express will catch this on its own.
-            throw new Error('User not deleted. Are you sure it exists?')
-        }
+        res.json({
+            success: true,
+            message: "User deleted successfully."
+        });
 
     } catch (error) {
         console.log(error);
         next(error);
     }
-}
+};
